@@ -1,0 +1,99 @@
+<?php
+// $Id: zmod.module,v 1.1 2008/01/20 16:12:21 wolanin Exp $
+function zmod_block($op = 'list', $delta = 0, $edit = array()) {
+  global $user;
+
+  if ($op == 'list') {
+    $blocks = array();
+    $blocks[0]['info'] = t('User login/logout link');
+    return $blocks;
+  }
+  elseif ($op == 'view') {
+    $block = array();
+    $module_path = drupal_get_path('module', 'zmod');
+    //drupal_add_css($module_path .'/zmod.css');
+
+    switch ($delta) {
+      case 0:
+        if (!$user->uid) {
+          zmod_add_block_js();
+          $block['subject'] = '';
+          $block['content'] = l(t('Login / Register'), 'user/login', array('id' => 'toggle-login'));
+        }
+        else {
+          $block['subject'] = '';
+          $block['content'] = check_plain($user->name) .' - '. l(t('Log out'), 'logout');
+        }
+        return $block;
+    }
+  }
+}
+
+function zmod_add_block_js() {
+
+  $data = 
+"if (Drupal.jsEnabled) {
+  (function($) {
+    $(document).ready(function() {
+    $('#block-user-0').hide();
+    $('#toggle-login').click(function() {
+      $('#block-user-0').slideToggle('fast');
+      return false;
+    });
+  });
+  })(jQuery);
+}";
+
+  drupal_add_js($data, 'inline');
+}
+
+function zmod_menu($maycache) {
+  global $user;
+
+  if (!$maycache) {
+
+  }
+  else {
+    $items[] = array(
+      'path'=>'contact/list',
+      'title'=> t('Contacts'),
+      'access' => TRUE,
+      'callback' => 'contact_list_page',
+      'type' => MENU_SUGGESTED_ITEM,
+      );
+  }
+  
+  return $items;
+}
+
+function contact_list_page() {
+  $output = '';
+  $result = db_query('SELECT * FROM {contact} ORDER BY weight, category');
+  $output .= '<div id="contact-list">';
+  $output .= '<div class="item-list"><ul>';
+  while ($contact = db_fetch_object($result)) {
+    $cleanurl = str_replace(' ', '_' ,$contact->category);
+    $output .= '<li>'. l($contact->category , 'contact/'. $cleanurl) .'</li>';
+  }
+  $output .= '</div>';
+  $output .= '</div>';
+  
+  return $output;
+}
+
+function zmod_form_alter($form_id, &$form) {
+  //drupal_set_message($form_id."<br>".print_r($form,1));
+  if ($form['#id'] == 'node-form' && isset($form['#node']) && $form['#node']->type == 'event') {
+    if (module_exists('jscalendar')) {
+      $form['end_date'] = array(
+      '#type' => 'value',
+      '#value' => '1990-01-01 12:00',
+     );
+    }
+    $form['event_end'] = NULL;
+    $form['end'] = array(
+      '#type' => 'value',
+      '#value' => 1,
+    );
+  }
+}
