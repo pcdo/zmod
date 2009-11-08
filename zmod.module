@@ -6,7 +6,6 @@ function zmod_block($op = 'list', $delta = '0', $edit = array()) {
   if ($op == 'list') {
     $blocks = array();
     $blocks['0']['info'] = t('User login/logout link');
-    $blocks['zmod-events']['info'] = t('Zmod Upcoming events');
     return $blocks;
   }
   elseif ($op == 'view') {
@@ -24,115 +23,15 @@ function zmod_block($op = 'list', $delta = '0', $edit = array()) {
           $block['content'] = check_plain($user->name) .' - '. l(t('Log out'), 'logout');
         }
         break;
-      case 'zmod-events':
-        $block['subject'] = 'Upcoming Events and Activities';
-        $block['content'] = zmod_upcoming_events();
-        break;
     }
     return $block;
   }
 }
 
 function zmod_menu() {
-  $items['dems-main'] = array(
-    'page callback' => 'zmod_page_default',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-  );
-  $items['events/category/%'] = array(
-    'page callback' => 'zmod_events_category_page',
-    'page arguments' => array(2),
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-  );
+  $items = array();
 
   return $items;
-}
-
-function zmod_page_default($num_events = 10, $num_promoted = 2) {
-  $result = db_query_range(db_rewrite_sql('SELECT n.nid, n.sticky, n.created FROM {node} n WHERE n.promote = 1 AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC'), 0, $num_promoted);
-
-  $output = '';
-  $num_rows = FALSE;
-  while ($node = db_fetch_object($result)) {
-    $output .= node_view(node_load($node->nid), 1);
-    $num_rows = TRUE;
-  }
-
-  if ($num_rows) {
-    //$feed_url = url('main/feed', array('absolute' => TRUE));
-    //drupal_add_feed($feed_url, variable_get('site_name', 'Drupal') .' '. t('RSS'));
-  }
-  drupal_set_title('');
-
-  return $output . "\n<h2>Upcoming Events and Activities</h2>\n" . zmod_upcoming_events($num_events);
-}
-
-function zmod_events_category_page($tid, $limit = 10) {
-  if (is_numeric($tid)) {
-    $term = db_fetch_array(db_query(db_rewrite_sql('SELECT t.tid, t.name FROM {term_data} t WHERE t.tid = %d', 't', 'tid'), $tid));
-    if ($term) {
-      drupal_set_title('Upcoming '. check_plain($term['name']) .' events');
-      return zmod_upcoming_events($limit, $tid);
-    }
-  }
-  return MENU_NOT_FOUND;
-}
-
-function zmod_upcoming_events($limit = 10, $tid = 0) {
-  $content = '';
-  if (module_exists('event')) {
-    event_include_files();
-    $time_exploded = _event_user_time();
-    $time = event_implode_date($time_exploded);
-    $types = event_get_types('all');
-    if (!count($types)) {
-      return '';
-    }
-    // Lookup events currently taking place and upcoming events, up to $limit events.
-    // copied/modified from mysql version of event_get_events_upcoming($time, $types, $limit, $rewrite_parameter = array()) {
-    $placeholders = implode(',', array_fill(0, count($types), "'%s'"));
-    $query = "SELECT n.nid, n.uid, n.title, n.type, n.status, n.changed, e.event_start, e.event_end, e.timezone, e.has_time, e.has_end_date, TIMEDIFF(e.event_start, '%s') AS time_left, DATEDIFF(e.event_start, '%s') AS days_left FROM {node} n INNER JOIN {event} e ON n.nid = e.nid ";
-    if ($tid) {
-      $query .= " INNER JOIN {term_node} tn ON tn.nid = n.nid";
-    }
-    $query .= " WHERE n.status = 1 AND n.type IN ($placeholders) AND ('%s' <= e.event_start + INTERVAL %d SECOND)";
-    if ($tid) {
-      $query .= " AND tn.tid = %d";
-    }
-    $query .= " ORDER BY event_start";
-    $result = db_query_range(db_rewrite_sql($query, 'n', 'nid', array('event' => TRUE, 'event_get_events' => TRUE, 'event_get_events_upcoming' => TRUE, 'event_types' => $types)), array_merge(array($time, $time), $types, array($time, (60 * 60 * 2), $tid)), 0, $limit);
-
-    $items = array();
-    while ($node = db_fetch_object($result)) {
-      if (event_is_later($node->event_start, $time, 'string')) {
-        $days_left = $node->days_left;
-        if ($days_left > 0) {
-          $timeleft = format_plural($days_left, '1 day', '@count days');
-        }
-        else {
-          $time_left = explode(':', $node->time_left);
-          if ($time_left[0] > 23) {
-            $timeleft = format_plural(floor($time_left[0] / 24), '1 day', '@count days');
-          }
-          else if ($time_left[0] >= 1) {
-            $timeleft = format_plural((int) $time_left[0], '1 hour', '@count hours');
-          }
-          else {
-            $timeleft = format_plural((int) $time_left[1], '1 minute', '@count minutes');
-          }
-        }
-        $timeleft = 'in '. $timeleft;
-      }
-      else {
-        $timeleft = t('Now');
-      }
-      $node = node_load($node->nid);
-      $node->title .= ' ('. $timeleft .')';
-      $content .= node_view($node, TRUE, FALSE, FALSE);
-    }
-  }
-  return $content . '<p>'.l('See the full calendar', 'event') .'</p>';
 }
 
 function zmod_init() {
