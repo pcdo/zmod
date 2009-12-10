@@ -34,6 +34,34 @@ function zmod_menu() {
   return $items;
 }
 
+function zmod_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'view':
+      if ($node->type == 'household') {
+        $result = db_query(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n JOIN {content_type_member} ctm ON ctm.vid = n.vid WHERE ctm.field_household_nid = %d"), $node->nid);
+        $list = array();
+        while ($m = db_fetch_array($result)) {
+          $list[] = l($m['title'], 'node/' . $m['nid']);
+        }
+        $node->content['zmod_members_at_house'] = array(
+          '#value' => '<h3>Members at this address:</h3>' . theme('item_list', $list),
+          '#weight' => 100,
+        );
+
+      }
+      break;
+
+    case 'prepare':
+      break;
+
+    // Assign renewal date for updated member.
+    case 'presave':
+      if ($node->type == 'member') {
+      }
+      break;
+  }
+}
+
 function zmod_init() {
   global $user;
 
