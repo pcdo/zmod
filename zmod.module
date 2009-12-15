@@ -38,7 +38,7 @@ function zmod_nodeapi(&$node, $op, $teaser, $page) {
   switch ($op) {
     case 'view':
       if ($node->type == 'household') {
-        $result = db_query(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n JOIN {content_type_member} ctm ON ctm.vid = n.vid WHERE ctm.field_household_nid = %d"), $node->nid);
+        $result = db_query(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n JOIN {content_type_member} ctm ON ctm.vid = n.vid WHERE ctm.field_household_nid = %d AND n.status = 1"), $node->nid);
         $list = array();
         while ($m = db_fetch_array($result)) {
           $list[] = l($m['title'], 'node/' . $m['nid']);
