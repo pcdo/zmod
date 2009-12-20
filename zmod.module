@@ -54,9 +54,17 @@ function zmod_nodeapi(&$node, $op, $teaser, $page) {
     case 'prepare':
       break;
 
-    // Assign renewal date for updated member.
+    
     case 'presave':
       if ($node->type == 'member') {
+        // Assign renewal date for updated member.
+        $curr = db_fetch_array(db_query("SELECT field_renewal_date_value, field_mem_value FROM {content_type_member} ctm INNER JOIN {node} n ON ctm.vid = n.vid WHERE n.nid = %d", $node->nid));
+        if (!$curr || $node->field_mem[0]['value'] > $curr['field_mem_value']) {
+          // Don't overwrite user input
+          if (empty($node->field_renewal_date[0]['value']) || ($curr && $node->field_renewal_date[0]['value'] == $curr['field_renewal_date_value'])) {
+            $node->field_renewal_date[0]['value'] = time();
+          }
+        }
       }
       break;
   }
