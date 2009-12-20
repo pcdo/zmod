@@ -62,6 +62,14 @@ function zmod_nodeapi(&$node, $op, $teaser, $page) {
   }
 }
 
+function zmod_form_alter(&$form, $form_state, $form_id) {
+
+  if ('member_node_form' == $form_id || 'household_node_form' == $form_id)  {
+    // Get rid of "- Please choose -" option
+    array_shift($form['taxonomy']['9']['#options']);
+  }
+}
+
 function zmod_init() {
   global $user;
 
