@@ -30,7 +30,16 @@ function zmod_block($op = 'list', $delta = '0', $edit = array()) {
 
 function zmod_menu() {
   $items = array();
-
+  $items['member-list/view'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['member-list/stats'] = array(
+    'title' => 'Member stats',
+    'page callback' => 'zmod_member_stats',
+    'access arguments' => array('create member content'),
+    'type' => MENU_LOCAL_TASK,
+  );
   return $items;
 }
 
@@ -96,4 +105,23 @@ function zmod_init() {
 }";
     drupal_add_js($data, 'inline');
   }
+}
+
+function zmod_member_stats() {
+  $sql = 
+  "SELECT ctm.field_mem_value as membership, COUNT(n.nid) AS num_members, COUNT(DISTINCT(ctm.field_household_nid)) AS num_households 
+   FROM {node} n INNER JOIN {content_type_member} ctm ON n.vid = ctm.vid
+   WHERE (n.status <> 0) AND (n.type = 'member')
+   GROUP BY ctm.field_mem_value
+   ORDER BY ctm.field_mem_value DESC";
+  $header = array();
+  $rows = array();
+  $result = db_query($sql);
+  while ($row = db_fetch_array($result)) {
+    if (!$header) {
+      $header = array_keys($row);
+    }
+    $rows[] = $row;
+  }
+  return theme('table', $header, $rows);
 }
