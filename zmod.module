@@ -37,7 +37,7 @@ function zmod_menu() {
   $items['member-list/stats'] = array(
     'title' => 'Member stats',
     'page callback' => 'zmod_member_stats',
-    'access arguments' => array('create member content'),
+    'access arguments' => array('access user profiles'),
     'type' => MENU_LOCAL_TASK,
   );
   return $items;
