@@ -123,5 +123,41 @@ function zmod_member_stats() {
     }
     $rows[] = $row;
   }
-  return theme('table', $header, $rows);
+  $output = '<h3>Aggregate stats</h3>';
+  $output .= theme('table', $header, $rows);
+  $current = 'M-' . date('y');
+  $sql = 
+  "SELECT substring(field_district_value, 1, 1) as municipality, COUNT(n.nid) AS num_members, COUNT(DISTINCT(ctm.field_household_nid)) AS num_households 
+  FROM {node} n INNER JOIN {content_type_member} ctm ON n.vid = ctm.vid INNER JOIN content_type_household cth ON cth.nid = ctm.field_household_nid INNER JOIN {node} h_node ON h_node.vid = cth.vid
+   WHERE (n.status <> 0) AND cth.field_district_value IS NOT NULL AND ctm.field_mem_value = '%s'
+   GROUP BY substring(cth.field_district_value, 1, 1)";
+  $header = array();
+  $rows = array();
+  $result = db_query($sql, $current);
+  while ($row = db_fetch_array($result)) {
+    if (!$header) {
+      $header = array_keys($row);
+    }
+    $rows[] = $row;
+  }
+  $output .= '<h3>Current year paid members by municipality</h3>';
+  $output .= theme('table', $header, $rows);
+  $sql = 
+  "SELECT cth.field_district_value as district, COUNT(n.nid) AS num_members, COUNT(DISTINCT(ctm.field_household_nid)) AS num_households 
+  FROM {node} n INNER JOIN {content_type_member} ctm ON n.vid = ctm.vid INNER JOIN content_type_household cth ON cth.nid = ctm.field_household_nid INNER JOIN {node} h_node ON h_node.vid = cth.vid
+   WHERE (n.status <> 0) AND ctm.field_mem_value = '%s'
+   GROUP BY cth.field_district_value
+   ORDER BY cth.field_district_value DESC";
+  $header = array();
+  $rows = array();
+  $result = db_query($sql, $current);
+  while ($row = db_fetch_array($result)) {
+    if (!$header) {
+      $header = array_keys($row);
+    }
+    $rows[] = $row;
+  }
+    $output .= '<h3>Current year paid members by district</h3>';
+  $output .= theme('table', $header, $rows);
+  return $output;
 }
