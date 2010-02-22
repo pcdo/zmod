@@ -140,7 +140,7 @@ function zmod_member_stats() {
     }
     $rows[] = $row;
   }
-  $output .= '<h3>Current year paid members by municipality</h3>';
+  $output .= '<h3>Current year paid full members by municipality</h3>';
   $output .= theme('table', $header, $rows);
   $sql = 
   "SELECT cth.field_district_value as district, COUNT(n.nid) AS num_members, COUNT(DISTINCT(ctm.field_household_nid)) AS num_households 
@@ -157,7 +157,7 @@ function zmod_member_stats() {
     }
     $rows[] = $row;
   }
-    $output .= '<h3>Current year paid members by district</h3>';
+    $output .= '<h3>Current year paid full members by district</h3>';
   $output .= theme('table', $header, $rows);
   return $output;
 }
