@@ -28,6 +28,10 @@ function zmod_block($op = 'list', $delta = '0', $edit = array()) {
   }
 }
 
+function zmod_perm() {
+  return array('export membership list');
+}
+
 function zmod_menu() {
   $items = array();
   $items['member-list/view'] = array(
@@ -38,6 +42,13 @@ function zmod_menu() {
     'title' => 'Member stats',
     'page callback' => 'zmod_member_stats',
     'access arguments' => array('access user profiles'),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['member-list/export'] = array(
+    'title' => 'Member list export',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('zmod_list_export_form'),
+    'access arguments' => array('export membership list'),
     'type' => MENU_LOCAL_TASK,
   );
   return $items;
@@ -161,3 +172,128 @@ function zmod_member_stats() {
   $output .= theme('table', $header, $rows);
   return $output;
 }
+
+function zmod_list_export_form() {
+  $cck_info = content_types('member');
+  $options = content_allowed_values($cck_info['fields']['field_mem']);
+
+  $form = array();
+  $form['mem_types'] = array(
+   '#title' => t('Which members?'),
+   '#type' => 'checkboxes',
+   '#options' => $options,
+   '#default_value' => array('M-10', 'A-10', 'C', 'M-09', 'A-09'),
+   '#required' => TRUE,
+  );
+  $form['include_emo'] = array(
+   '#title' => t('Include email-only members?'),
+   '#type' => 'checkbox',
+   '#default_value' => FALSE,
+  );
+  $form['text'] = array(
+    '#value' => '<h3>Hit the button to export</h3>'
+  );
+  $form['export'] = array(
+    '#type' => 'submit', 
+    '#value' => t('Export list'),
+  );
+  
+  return $form;
+
+}
+
+function zmod_list_export_form_submit($form, &$form_state) {
+  $sql = "SELECT GROUP_CONCAT(CONCAT(n.title, ' (', ctm.field_mem_value, ')')
+  SEPARATOR \"\r\n\") as names,
+  hn.title AS address, cth.field_city_value AS city,
+  cth.field_state_value AS state, cth.field_zip_value AS zip
+  FROM node n
+  INNER JOIN content_type_member ctm ON n.vid = ctm.vid
+  INNER JOIN content_type_household cth ON ctm.field_household_nid = cth.nid
+  INNER JOIN node hn ON hn.vid = cth.vid
+  WHERE ctm.field_mem_value IN (" . db_placeholders($form_state['values']['mem_types'], 'text') . ") AND n.status = 1";
+  if (!$form_state['values']['include_emo']) {
+    $sql .= " AND ctm.field_email_only_value != 1";
+  }
+  $sql .= " GROUP BY cth.nid ORDER BY ctm.field_last_name_value";
+  $result = db_query($sql, $form_state['values']['mem_types']);
+  $rows = array();
+  while ($row = db_fetch_array($result)) {
+    if (empty($rows)) {
+      // Header row.
+      $rows[] = array_keys($row);
+    }
+    $rows[] = $row;
+  }
+  zmod_member_export_csv($rows);
+}
+
+
+function zmod_member_export_csv($rows) {
+  
+  $filename = 'pcdo_members_' . format_date(time(), 'custom', 'Y-m-d');
+  
+  $data = zmod_member_csv_put_formatted($rows);
+  
+  header("Content-type: text/plain; charset=UTF-8");
+  header("Content-Disposition: attachment; filename=$filename.csv");
+  header("Cache-Control: no-cache");
+  header("Expires: 0");
+  print $data;
+  exit(); 
+}
+
+
+/**
+ * Transforms a nested array into a string in CSV format, where fields and
+ * records are character-delimited. This function is based on a custom version
+ * of the fputcsv() function, which can be found at this URL:
+ * http://php.net/fputcsv#57164
+ *
+ * @param $records
+ *   A nested array of 'lines' and 'fields' to be transformed into CSV format.
+ * @param $field_delimiter
+ *   The character to use as a field delimiter (defaults to comma ','
+ *   character).
+ * @param $record_delimiter
+ *   The character to use as a record delimiter (defaults to newline '\n'
+ *   character).
+ * @param $enclosure
+ *   The character to use as an enclosure (defaults to double-quote '"'
+ *   character).
+ *
+ * @return
+ *   A string containing the lines and fields in CSV format.
+ */
+function zmod_member_csv_put_formatted($records, $field_delimiter = ',', $record_delimiter = "\n", $enclosure = "\"") {
+  // Build the string
+  $csv_doc = '';
+
+  // for each array element, which represents a line in the CSV string...
+  foreach($records as $line) {
+    // No leading delimiter
+    $use_delimiter = FALSE;
+
+    foreach($line as $element) {
+      // Replaces a double quote with two double quotes
+      $element = str_replace("\"", "\"\"", $element);
+
+      // Adds a delimiter before each field (except the first)
+      if($use_delimiter) {
+        $csv_doc .= $field_delimiter;
+      }
+
+      // Encloses each field with $enclosure and adds it to the string
+      $csv_doc .= $enclosure . $element . $enclosure;
+
+      // Delimiters are used every time except the first.
+      $use_delimiter = TRUE;
+    }
+
+    // Append new line
+    $csv_doc .= $record_delimiter;
+  }
+
+  return $csv_doc;
+}
+
