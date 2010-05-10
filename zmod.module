@@ -190,6 +190,12 @@ function zmod_list_export_form() {
    '#type' => 'checkbox',
    '#default_value' => FALSE,
   );
+  $form['municipality'] = array(
+   '#title' => t('Municipality'),
+   '#type' => 'radios',
+   '#default_value' => '',
+   '#options' => array('' => t('All'), 'B-' => t('Boro only'), 'T-' => t('Township only')),
+  );
   $form['text'] = array(
     '#value' => '<h3>Hit the button to export</h3>'
   );
@@ -212,11 +218,16 @@ function zmod_list_export_form_submit($form, &$form_state) {
   INNER JOIN content_type_household cth ON ctm.field_household_nid = cth.nid
   INNER JOIN node hn ON hn.vid = cth.vid
   WHERE ctm.field_mem_value IN (" . db_placeholders($form_state['values']['mem_types'], 'text') . ") AND n.status = 1";
+  $args = $form_state['values']['mem_types'];
   if (!$form_state['values']['include_emo']) {
     $sql .= " AND ctm.field_email_only_value != 1";
   }
+  if ($form_state['values']['municipality']) {
+    $sql .= " AND cth.field_district_value LIKE '%s%%'";
+    $args[] = $form_state['values']['municipality'];
+  }
   $sql .= " GROUP BY cth.nid ORDER BY ctm.field_last_name_value";
-  $result = db_query($sql, $form_state['values']['mem_types']);
+  $result = db_query($sql, $args);
   $rows = array();
   while ($row = db_fetch_array($result)) {
     if (empty($rows)) {
