@@ -96,6 +96,12 @@ function zmod_form_alter(&$form, $form_state, $form_id) {
     // Get rid of "- Please choose -" option
     array_shift($form['taxonomy']['9']['#options']);
   }
+  elseif (isset($form['type']) && $form_id == $form['type']['#value'] .'_node_form') {
+    // node edit form
+    if (isset($form['event'])) {
+      $form['event']['#weight'] = -1;
+    }
+  }
 }
 
 function zmod_init() {
