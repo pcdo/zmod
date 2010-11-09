@@ -361,7 +361,7 @@ function zmod_mailmerge_export_form() {
    '#title' => t('Which members?'),
    '#type' => 'checkboxes',
    '#options' => $options,
-   '#default_value' => array('M-11', 'A-11', 'M-10', 'A-10', 'C', 'M-09', 'A-09'),
+   '#default_value' => array('M-11', 'A-11', 'M-10', 'A-10', 'M-09', 'A-09'),
    '#required' => TRUE,
   );
   $form['include_emo'] = array(
