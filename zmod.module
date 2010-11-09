@@ -404,25 +404,25 @@ function zmod_mailmerge_export_form_submit($form, &$form_state) {
     $sql .= " AND cth.field_district_value LIKE '%s%%'";
     $args[] = $form_state['values']['municipality'];
   }
-  $sql .= " ORDER BY ctm.field_household_nid, ctm.field_last_name_value";
+  $sql .= " ORDER BY ctm.field_last_name_value";
   $result = db_query($sql, $args);
   $rows = array();
   // Header row.  We know we have no more than 3 per houshold.
-  $row = array('address', 'address_line2', 'city',  'state', 'zip', 'name1', 'email1', 'email_only1', 'mem1', 'name2',  'email2', 'email_only2', 'mem2', 'name3', 'email3', 'email_only3', 'mem3');
-  $header_count = count($row);
-  $hnid = 0;
-  $hcount = 0;
+  $header = array('address', 'address_line2', 'city',  'state', 'zip', 'name1', 'email1', 'email_only1', 'mem1', 'name2',  'email2', 'email_only2', 'mem2', 'name3', 'email3', 'email_only3', 'mem3');
+  $rows[] = $header;
+  $header_count = count($header);
   while ($a = db_fetch_array($result)) {
-    if ($hnid != $a['hnid']) {
-      $rows[] = array_pad($row, $header_count, '');
-      $hnid = $a['hnid'];
-      $row = array($a['address'], $a['address_line2'], $a['city'],  $a['state'], $a['zip']);
+    $hnid = $a['hnid'];
+    if (!isset($rows[$hnid])) {
+      $rows[$hnid] = array($a['address'], $a['address_line2'], $a['city'],  $a['state'], $a['zip']);
     }
-    $row[] = $a['name'];
-    $row[] = $a['email'];
-    $row[] = $a['email_only'] != 1 ? '' : 'Yes';
-    $row[] = $a['membership'];
+    $rows[$hnid][] = $a['name'];
+    $rows[$hnid][] = $a['email'];
+    $rows[$hnid][] = $a['email_only'] != 1 ? '' : 'Yes';
+    $rows[$hnid][] = $a['membership'];
   }
-  $rows[] = array_pad($row, $header_count, '');
+  foreach ($rows as $idx => $row) {
+    $rows[$idx] = array_pad($row, $header_count, '');
+  }
   zmod_member_export_csv($rows, 'pcdo_mailmerge_');
 }
