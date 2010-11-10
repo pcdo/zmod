@@ -239,6 +239,12 @@ function zmod_list_export_form() {
    '#default_value' => '',
    '#options' => array('' => t('All'), 'B-' => t('Boro only'), 'T-' => t('Township only')),
   );
+  $form['separator'] = array(
+   '#title' => t('Line seperator'),
+   '#type' => 'radios',
+   '#default_value' => "\r\n",
+   '#options' => array("\r\n" => t('Windows'), "\n" => t('Unix'),
+  );
   $form['text'] = array(
     '#value' => '<h3>Hit the button to export</h3>'
   );
@@ -253,7 +259,7 @@ function zmod_list_export_form() {
 
 function zmod_list_export_form_submit($form, &$form_state) {
   $sql = "SELECT GROUP_CONCAT(CONCAT(n.title, ' (', ctm.field_mem_value, ')')
-  SEPARATOR \"\r\n\") as names,
+  SEPARATOR \"". $form_state['values']['values']['separator'] ."\") as names,
   hn.title AS address, cth.field_city_value AS city,
   cth.field_state_value AS state, cth.field_zip_value AS zip
   FROM node n
