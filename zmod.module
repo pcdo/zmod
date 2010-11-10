@@ -243,7 +243,7 @@ function zmod_list_export_form() {
    '#title' => t('Line seperator'),
    '#type' => 'radios',
    '#default_value' => "\r\n",
-   '#options' => array("\r\n" => t('Windows'), "\n" => t('Unix'),
+   '#options' => array("\r\n" => t('Windows'), "\n" => t('Unix')),
   );
   $form['text'] = array(
     '#value' => '<h3>Hit the button to export</h3>'
