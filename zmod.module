@@ -221,6 +221,13 @@ function zmod_list_export_form() {
   $options = content_allowed_values($cck_info['fields']['field_mem']);
 
   $form = array();
+  $form['list_format'] = array(
+   '#title' => t('List format'),
+   '#type' => 'radios',
+   '#options' => array('mailing' => t('Mailing list (grouped by houshold)'), 'meeting' => t('Meeting check-in (one name per line)')),
+   '#default_value' => 'mailing',
+   '#required' => TRUE,
+  );
   $form['mem_types'] = array(
    '#title' => t('Which members?'),
    '#type' => 'checkboxes',
@@ -258,9 +265,15 @@ function zmod_list_export_form() {
 }
 
 function zmod_list_export_form_submit($form, &$form_state) {
-  $separator = $form_state['values']['values']['separator'] == 'u' ? "\n" : "\r\n";
-  $sql = "SELECT GROUP_CONCAT(CONCAT(n.title, ' (', ctm.field_mem_value, ')')
-  SEPARATOR \"". $separator ."\") as names,
+  if ($form_state['values']['list_format'] == 'mailing') {
+    $separator = $form_state['values']['values']['separator'] == 'u' ? "\n" : "\r\n";
+    $sql = "SELECT GROUP_CONCAT(CONCAT(n.title, ' (', ctm.field_mem_value, ')')
+    SEPARATOR \"". $separator ."\") AS names,";
+  }
+  else {
+    $sql = "SELECT ctm.field_last_name_value AS last_name, ctm.field_first_name_value AS first_name, ctm.field_mem_value AS membership, cth.field_district_value as district,";
+  }
+  $sql .= "
   hn.title AS address, cth.field_city_value AS city,
   cth.field_state_value AS state, cth.field_zip_value AS zip
   FROM node n
@@ -269,14 +282,19 @@ function zmod_list_export_form_submit($form, &$form_state) {
   INNER JOIN node hn ON hn.vid = cth.vid
   WHERE ctm.field_mem_value IN (" . db_placeholders($form_state['values']['mem_types'], 'text') . ") AND n.status = 1";
   $args = $form_state['values']['mem_types'];
-  if (!$form_state['values']['include_emo']) {
+  if (!$form_state['values']['include_emo'] && $form_state['values']['list_format'] == 'mailing') {
     $sql .= " AND ctm.field_email_only_value != 1";
   }
   if ($form_state['values']['municipality']) {
     $sql .= " AND cth.field_district_value LIKE '%s%%'";
     $args[] = $form_state['values']['municipality'];
   }
-  $sql .= " GROUP BY cth.nid ORDER BY ctm.field_last_name_value";
+  if ($form_state['values']['list_format'] == 'mailing') {
+    $sql .= " GROUP BY cth.nid ORDER BY ctm.field_last_name_value";
+  }
+  else {
+    $sql .= " ORDER BY ctm.field_last_name_value, ctm.field_first_name_value";
+  }
   $result = db_query($sql, $args);
   $rows = array();
   while ($row = db_fetch_array($result)) {
@@ -286,7 +304,7 @@ function zmod_list_export_form_submit($form, &$form_state) {
     }
     $rows[] = $row;
   }
-  zmod_member_export_csv($rows);
+  zmod_member_export_csv($rows, 'pcdo_members_' . $form_state['values']['list_format'] . '_');
 }
 
 
