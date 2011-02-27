@@ -108,6 +108,9 @@ function zmod_form_alter(&$form, $form_state, $form_id) {
     $vid = variable_get('forum_nav_vocabulary', '');
     if ($vid && isset($form['taxonomy'][$vid]['#options']['']) && count($form['taxonomy'][$vid]['#options']) == 2) {
       unset($form['taxonomy'][$vid]['#options']['']);
+      list($tid, $name) = each($form['taxonomy'][$vid]['#options']);
+      $form['taxonomy'][$vid]['#type'] = 'value';
+      $form['taxonomy'][$vid]['#value'] = $tid;
     }
   }
   elseif (isset($form['type']) && $form_id == $form['type']['#value'] .'_node_form') {
