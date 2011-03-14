@@ -1,4 +1,4 @@
-Site-specific hacks for PCDO.
+A Drupal 6 module with site-specific hacks for PCDO.
 
 Copyright 2009 - 2011 by Peter Wolanin
 
